@@ -4,9 +4,10 @@ import com.medchain.model.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 public final class Repos {
     private Repos() {}
@@ -23,23 +24,29 @@ public final class Repos {
 
     public interface PatientRepo extends JpaRepository<Patient, Long> {}
 
-    public interface BillRepo extends JpaRepository<Bill, String> {
-        @Query("select b from Bill b where (:patientId is null or b.patient.id = :patientId) "
-             + "and (:date is null or b.billDate = :date) "
-             + "and (:pharmacyId is null or b.pharmacy.id = :pharmacyId) order by b.createdAt desc")
-        List<Bill> search(@Param("patientId") Long patientId, @Param("date") LocalDate date,
-                          @Param("pharmacyId") Long pharmacyId);
+    // The filters are optional. They are built dynamically because PostgreSQL cannot infer the type of a
+    // null bind parameter in "(:p is null or col = :p)" and fails with a 500.
+    public interface BillRepo extends JpaRepository<Bill, String>, JpaSpecificationExecutor<Bill> {
+        default List<Bill> search(Long patientId, LocalDate date, Long pharmacyId) {
+            Specification<Bill> spec = Specification.where(null);
+            if (patientId != null) spec = spec.and((b, q, cb) -> cb.equal(b.get("patient").get("id"), patientId));
+            if (date != null) spec = spec.and((b, q, cb) -> cb.equal(b.get("billDate"), date));
+            if (pharmacyId != null) spec = spec.and((b, q, cb) -> cb.equal(b.get("pharmacy").get("id"), pharmacyId));
+            return findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
+        }
         List<Bill> findByPatientId(Long patientId);
-        long countByPatientId(Long patientId);
         long countByPharmacyId(Long pharmacyId);
+        long countByPatientId(Long patientId);
     }
 
-    public interface ReportRepo extends JpaRepository<LabReport, String> {
-        @Query("select r from LabReport r where (:patientId is null or r.patient.id = :patientId) "
-             + "and (:type is null or lower(r.reportType) = lower(:type)) "
-             + "and (:labId is null or r.lab.id = :labId) order by r.createdAt desc")
-        List<LabReport> search(@Param("patientId") Long patientId, @Param("type") String type,
-                               @Param("labId") Long labId);
+    public interface ReportRepo extends JpaRepository<LabReport, String>, JpaSpecificationExecutor<LabReport> {
+        default List<LabReport> search(Long patientId, String type, Long labId) {
+            Specification<LabReport> spec = Specification.where(null);
+            if (patientId != null) spec = spec.and((r, q, cb) -> cb.equal(r.get("patient").get("id"), patientId));
+            if (type != null) spec = spec.and((r, q, cb) -> cb.equal(cb.lower(r.get("reportType")), type.toLowerCase()));
+            if (labId != null) spec = spec.and((r, q, cb) -> cb.equal(r.get("lab").get("id"), labId));
+            return findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
+        }
         long countByLabId(Long labId);
         long countByPatientId(Long patientId);
     }

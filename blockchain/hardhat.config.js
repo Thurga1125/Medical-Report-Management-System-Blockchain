@@ -12,7 +12,7 @@ module.exports = {
       ...(key && { accounts: [{ privateKey: key, balance: "10000000000000000000000" }] }),
     },
     localhost: {
-      url: "http://127.0.0.1:8545",
+      url: process.env.CHAIN_RPC_URL || "http://127.0.0.1:8545",
       chainId: 1337,
       ...(key && { accounts: [key] }),
     },
