@@ -29,6 +29,11 @@ The hospital login is `admin` / the `ADMIN_PASSWORD` you set. If you leave it un
 logged once (`Created hospital admin 'admin' with generated password: ...`) the first time the account is created.
 Changing `ADMIN_PASSWORD` later does not change an existing account.
 
+## Demo data
+On a fresh database (backend running): `ADMIN_PASSWORD=<pw> ./scripts/seed-demo.sh` creates 2 pharmacies, 2 labs,
+5 patients, 6 bills and 5 reports through the API, so all of them are anchored on the chain.
+Logins: `pharm1`/`pharm1pass`, `pharm2`/`pharm2pass`, `lab1`/`lab1pass`, `lab2`/`lab2pass`.
+
 ## Tests
 - `cd blockchain && npm test` - contract tests (anchor once, immutability, verify) on an in-process Hardhat network.
 - `cd backend && mvn test` - hashing (determinism, tamper sensitivity), verify statuses, patient-delete guard.
